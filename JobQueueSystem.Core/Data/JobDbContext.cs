@@ -18,6 +18,7 @@ namespace JobQueueSystem.Core.Data
             // Job entity configuration
             modelBuilder.Entity<Job>(entity =>
             {
+                entity.ToTable("Jobs");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.JobName).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.Priority).HasConversion<int>();
@@ -35,6 +36,7 @@ namespace JobQueueSystem.Core.Data
             // Worker node entity configuration
             modelBuilder.Entity<WorkerNode>(entity =>
             {
+                entity.ToTable("WorkerNode");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Status).HasConversion<int>();
@@ -47,6 +49,7 @@ namespace JobQueueSystem.Core.Data
             // Job execution log entity configuration
             modelBuilder.Entity<JobExecutionLog>(entity =>
             {
+                entity.ToTable("JobExecutionLog");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.JobId).IsRequired();
                 entity.Property(e => e.LogLevel).HasConversion<int>();
