@@ -13,26 +13,28 @@ using JobQueueSystem.Core.Interfaces;
 
 namespace JobQueueSystem.QueueService.Services
 {
+    using System;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.EntityFrameworkCore;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
+
     public class JobQueueService : BackgroundService
     {
         private readonly ILogger<JobQueueService> _logger;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly JobDistributor _jobDistributor;
-        private readonly IJobUpdateHub _jobUpdateHub;
+        private readonly IServiceScopeFactory _scopeFactory;
         private Timer _queueProcessorTimer;
         private Timer _heartbeatTimer;
 
         public JobQueueService(
             ILogger<JobQueueService> logger,
-            IServiceProvider serviceProvider,
-            JobDistributor jobDistributor,
-            IJobUpdateHub jobUpdateHub
-            )
+            IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
-            _serviceProvider = serviceProvider;
-            _jobDistributor = jobDistributor;
-            //_jobUpdateHub = jobUpdateHub;
+            _scopeFactory = scopeFactory;
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -50,11 +52,12 @@ namespace JobQueueSystem.QueueService.Services
 
         private async void ProcessQueue(object state)
         {
-            using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<JobDbContext>();
-
             try
             {
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<JobDbContext>();
+                var jobUpdateHub = scope.ServiceProvider.GetRequiredService<IJobUpdateHub>();
+
                 // Get all available workers
                 var availableWorkers = await dbContext.WorkerNodes
                     .Where(w => w.Status != WorkerStatus.Offline && w.ActiveJobCount < w.ConcurrencyLimit)
@@ -81,12 +84,15 @@ namespace JobQueueSystem.QueueService.Services
                     return;
                 }
 
+                // Get job distributor from the same scope
+                var jobDistributor = scope.ServiceProvider.GetRequiredService<JobDistributor>();
+
                 // Distribute jobs to workers
-                await _jobDistributor.DistributeJobs(pendingJobs, availableWorkers);
+                await jobDistributor.DistributeJobs(pendingJobs, availableWorkers);
 
                 // Notify clients about job status changes
-                await _jobUpdateHub.BroadcastJobStatusUpdates(pendingJobs.Select(j => j.Id).ToList());
-                await _jobUpdateHub.BroadcastWorkerStatusUpdates(availableWorkers.Select(w => w.Id).ToList());
+                await jobUpdateHub.BroadcastJobStatusUpdates(pendingJobs.Select(j => j.Id).ToList());
+                await jobUpdateHub.BroadcastWorkerStatusUpdates(availableWorkers.Select(w => w.Id).ToList());
             }
             catch (Exception ex)
             {
@@ -96,11 +102,12 @@ namespace JobQueueSystem.QueueService.Services
 
         private async void CheckWorkerHeartbeats(object state)
         {
-            using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<JobDbContext>();
-
             try
             {
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<JobDbContext>();
+                var jobUpdateHub = scope.ServiceProvider.GetRequiredService<IJobUpdateHub>();
+
                 // Find workers with stale heartbeats (more than 2 minutes old)
                 var staleTime = DateTime.UtcNow.AddMinutes(-2);
                 var staleWorkers = await dbContext.WorkerNodes
@@ -135,7 +142,7 @@ namespace JobQueueSystem.QueueService.Services
                 await dbContext.SaveChangesAsync();
 
                 // Notify clients about worker status changes
-                await _jobUpdateHub.BroadcastWorkerStatusUpdates(staleWorkers.Select(w => w.Id).ToList());
+                await jobUpdateHub.BroadcastWorkerStatusUpdates(staleWorkers.Select(w => w.Id).ToList());
             }
             catch (Exception ex)
             {

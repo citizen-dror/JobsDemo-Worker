@@ -19,5 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JobQueueSystem.Core\JobQueueSystem.Core.csproj" />
+    <ProjectReference Include="..\JobQueueSystem.WorkerNode\JobQueueSystem.WorkerNode.csproj" />
   </ItemGroup>
 </Project>

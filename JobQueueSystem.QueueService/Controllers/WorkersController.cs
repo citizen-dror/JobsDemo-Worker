@@ -27,9 +27,9 @@ namespace JobQueueSystem.QueueService.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<WorkerNode>>> GetWorkers([FromQuery] WorkerStatus? status)
+        public async Task<ActionResult<IEnumerable<Core.Models.WorkerNode>>> GetWorkers([FromQuery] WorkerStatus? status)
         {
-            IQueryable<WorkerNode> query = _dbContext.WorkerNodes;
+            IQueryable<Core.Models.WorkerNode> query = _dbContext.WorkerNodes;
 
             if (status.HasValue)
             {
@@ -40,7 +40,7 @@ namespace JobQueueSystem.QueueService.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<WorkerNode>> GetWorker(string id)
+        public async Task<ActionResult<Core.Models.WorkerNode>> GetWorker(string id)
         {
             var worker = await _dbContext.WorkerNodes.FindAsync(id);
 
@@ -53,7 +53,7 @@ namespace JobQueueSystem.QueueService.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<WorkerNode>> RegisterWorker(WorkerNode worker)
+        public async Task<ActionResult<Core.Models.WorkerNode>> RegisterWorker(Core.Models.WorkerNode worker)
         {
             // Check if worker with this name already exists
             var existingWorker = await _dbContext.WorkerNodes
