@@ -40,7 +40,7 @@ namespace JobQueueSystem.WorkerNode.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/workers/register", worker, _jsonOptions);
+                var response = await _httpClient.PostAsJsonAsync("api/worker/register", worker, _jsonOptions);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -69,7 +69,7 @@ namespace JobQueueSystem.WorkerNode.Services
                     Timestamp = DateTime.UtcNow
                 };
 
-                var response = await _httpClient.PostAsJsonAsync("api/workers/heartbeat", heartbeat, _jsonOptions);
+                var response = await _httpClient.PostAsJsonAsync("api/worker/heartbeat", heartbeat, _jsonOptions);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -91,7 +91,7 @@ namespace JobQueueSystem.WorkerNode.Services
                     Status = status
                 };
 
-                var response = await _httpClient.PutAsJsonAsync($"api/workers/{workerId}/status", statusUpdate, _jsonOptions);
+                var response = await _httpClient.PutAsJsonAsync($"api/worker/{workerId}/status", statusUpdate, _jsonOptions);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -110,7 +110,7 @@ namespace JobQueueSystem.WorkerNode.Services
             {
                 // This method is typically called by the queue service, not by workers
                 // But it's included for completeness
-                var response = await _httpClient.PostAsJsonAsync($"api/workers/{workerId}/jobs", job, _jsonOptions);
+                var response = await _httpClient.PostAsJsonAsync($"api/worker/{workerId}/jobs", job, _jsonOptions);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
